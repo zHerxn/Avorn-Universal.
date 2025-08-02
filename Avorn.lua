@@ -1,9 +1,9 @@
 --[[
-    AVORN v2.0 - Lanzamiento de Estabilidad
+    AVORN v3.0 - El Manifiesto
     Desarrollador: yordy alias the strongest
 
-    Esta versión representa un cambio de filosofía. Se han eliminado todas las funciones de API dudosas.
-    AVORN 2.0 está construido para ser compatible y robusto, utilizando una consola simulada para los logs.
+    Reescrito desde cero basándose en la guía de la API de Rayfield proporcionada.
+    Esta versión garantiza compatibilidad y estabilidad, eliminando todos los métodos "missing".
 ]]
 
 --//=============================================================================================================\\
@@ -13,7 +13,7 @@
 if getgenv and typeof(getgenv) == "function" then
     local env = getgenv()
     if env.AVORN_RUNNING then
-        warn("AVORN v2.0 ya se está ejecutando.")
+        warn("AVORN v3.0 ya se está ejecutando.")
         return
     end
     env.AVORN_RUNNING = true
@@ -25,12 +25,12 @@ end
 --\\=============================================================================================================//
 
 local Rayfield
-local success, result = pcall(function()
+local success, libError = pcall(function()
     Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 end)
 
 if not success then
-    game.Players.LocalPlayer:Kick("AVORN: No se pudo cargar Rayfield: " .. tostring(result))
+    game.Players.LocalPlayer:Kick("AVORN: Error crítico al cargar Rayfield: " .. tostring(libError))
     return
 end
 
@@ -41,84 +41,68 @@ end
 local Players, RunService, UserInputService, Workspace, TweenService = game:GetService("Players"), game:GetService("RunService"), game:GetService("UserInputService"), game:GetService("Workspace"), game:GetService("TweenService")
 local LocalPlayer, Camera = Players.LocalPlayer, Workspace.CurrentCamera
 
--- Configuración
 local Settings = { IgnoreTeammates = true, TargetVisibleOnly = true }
 local Aimbot = { Enabled = false, Key = Enum.KeyCode.E, FOV = 100, ShowFOV = true, Smoothing = 0.2, Prediction = 0.1 }
 local SilentAim = { Enabled = false, HitChance = 100 }
 local Targeting = { TargetPart = "Head", CurrentTarget = nil }
 local ESP = { Enabled = false, BoxEnabled = true, TracerEnabled = false, BoxColor = Color3.fromRGB(255, 49, 49), TracerColor = Color3.fromRGB(255, 184, 0), TargetLabelColor = Color3.fromRGB(255, 0, 0) }
 
--- Elementos Visuales y Estado
 local FOV_Circle, TargetLabel = Drawing.new("Circle"), Drawing.new("Text")
-local ESP_Elements, lastESP_Update, oldNamecall = {}, 0, nil
+local ESP_Elements, oldNamecall = {}, nil
 FOV_Circle.Visible, FOV_Circle.Radius, FOV_Circle.Color, FOV_Circle.Transparency = false, Aimbot.FOV, Color3.fromRGB(255, 255, 255), 1
-TargetLabel.Visible, TargetLabel.Text, TargetLabel.Center, TargetLabel.Outline = false, "TARGET", true, true
+TargetLabel.Visible, TargetLabel.Text, TargetLabel.Center, TargetLabel.Outline, TargetLabel.Color = false, "TARGET", true, true, ESP.TargetLabelColor
 
 --//=============================================================================================================\\
 --||                                       [ 3. CONSTRUCCIÓN DE LA UI ]                                          ||
 --\\=============================================================================================================//
 
 local Window = Rayfield:CreateWindow({
-    Name = "AVORN v2.0", LoadingTitle = "AVORN - ESTABLE", LoadingSubtitle = "por yordy alias the strongest",
-    ConfigurationSaving = { Enabled = true, FolderName = "AVORN", FileName = "Config_v2" },
+    Name = "AVORN v3.0", LoadingTitle = "AVORN - EL MANIFIESTO", LoadingSubtitle = "por yordy alias the strongest",
+    ConfigurationSaving = { Enabled = true, FolderName = "AVORN", FileName = "Config_v3" },
 })
 
--- Pestaña de Ajustes (creada primero para alojar la consola)
-local SettingsTab = Window:CreateTab("Ajustes", "rbxassetid://4483345545")
+-- Pestañas
+local CombatTab = Window:CreateTab("Combate", 4483345998)
+local SilentAimTab = Window:CreateTab("Silent Aim", 6002424087)
+local TargetingTab = Window:CreateTab("Apuntado", 6002452342)
+local VisualsTab = Window:CreateTab("Visuales", 4483346342)
+local SettingsTab = Window:CreateTab("Ajustes", 4483345545)
 
--- [CORREGIDO v2.0] Implementación de la consola simulada
-local logText = "AVORN v2.0 inicializado."
-local LogParagraph = SettingsTab:CreateParagraph({
-    Title = "Consola de Logs",
-    Content = logText
-})
+-- Contenido de Pestaña Combate
+CombatTab:CreateSection("Aimbot Legit (Mueve la cámara)")
+CombatTab:CreateToggle({ Name = "Activar Aimbot Legit", CurrentValue = Aimbot.Enabled, Flag = "LegitAimbotEnabled", Callback = function(v) Aimbot.Enabled = v end })
+CombatTab:CreateKeybind({ Name = "Tecla de Aimbot", CurrentKeybind = "E", Flag = "LegitAimbotKey", Callback = function(k) Aimbot.Key = k end })
+CombatTab:CreateSlider({ Name = "Suavizado", Range = {0, 0.95}, CurrentValue = Aimbot.Smoothing, Increment = 0.01, Flag = "LegitAimbotSmoothing", Callback = function(v) Aimbot.Smoothing = v end })
 
-local function Log(message)
-    print("[AVORN] " .. message) -- Imprime también a la consola F9 de Roblox para depuración
-    logText = logText .. "\n" .. tostring(message)
-    -- Limitar el número de líneas para no sobrecargar la UI
-    local lines = {}
-    for line in logText:gmatch("[^\r\n]+") do table.insert(lines, line) end
-    while #lines > 20 do table.remove(lines, 1) end
-    logText = table.concat(lines, "\n")
-    LogParagraph:Set({ Content = logText })
-end
+-- Contenido de Pestaña Silent Aim
+SilentAimTab:CreateSection("Silent Aim (No mueve la cámara)")
+SilentAimTab:CreateToggle({ Name = "Activar Silent Aim", CurrentValue = SilentAim.Enabled, Flag = "SilentAimEnabled", Callback = function(v) SilentAim.Enabled = v end })
+SilentAimTab:CreateSlider({ Name = "Probabilidad de Acierto", Range = {1, 100}, CurrentValue = SilentAim.HitChance, Suffix = "%", Increment = 1, Flag = "SilentAimHitChance", Callback = function(v) SilentAim.HitChance = v end })
 
--- El resto de la UI
-Log("Construyendo UI...")
-
-local CombatTab = Window:CreateTab("Combate", "rbxassetid://4483345998")
-CombatTab:CreateLabel("Aimbot Legit (Mueve la cámara)")
-CombatTab:CreateToggle({ Name = "Activar Aimbot Legit", Flag = "LegitAimbotEnabled", Callback = function(v) Aimbot.Enabled = v end })
-CombatTab:CreateKeybind({ Name = "Tecla de Aimbot", Flag = "LegitAimbotKey", Callback = function(k) Aimbot.Key = k end })
-CombatTab:CreateSlider({ Name = "Suavizado", Min = 0, Max = 0.95, Precision = 2, Flag = "LegitAimbotSmoothing", Callback = function(v) Aimbot.Smoothing = v end })
-
-local SilentAimTab = Window:CreateTab("Silent Aim", "rbxassetid://6002424087")
-SilentAimTab:CreateLabel("Silent Aim (No mueve la cámara)")
-SilentAimTab:CreateToggle({ Name = "Activar Silent Aim", Flag = "SilentAimEnabled", Callback = function(v) SilentAim.Enabled = v end })
-SilentAimTab:CreateSlider({ Name = "Probabilidad de Acierto (%)", Min = 1, Max = 100, Precision = 0, Flag = "SilentAimHitChance", Callback = function(v) SilentAim.HitChance = v end })
-
-local TargetingTab = Window:CreateTab("Apuntado", "rbxassetid://6002452342")
-TargetingTab:CreateLabel("Ajustes Universales de Apuntado")
-TargetingTab:CreateDropdown({ Name = "Parte Objetivo", Options = {"Head", "UpperTorso", "HumanoidRootPart"}, Flag = "TargetingPart", Callback = function(o) Targeting.TargetPart = o end })
-TargetingTab:CreateSlider({ Name = "Predicción", Min = 0, Max = 0.2, Precision = 3, Flag = "TargetingPrediction", Callback = function(v) Aimbot.Prediction = v end })
+-- Contenido de Pestaña Apuntado
+TargetingTab:CreateSection("Ajustes Universales de Apuntado")
+TargetingTab:CreateDropdown({ Name = "Parte Objetivo", Options = {"Head", "UpperTorso", "HumanoidRootPart"}, CurrentOption = {Targeting.TargetPart}, Flag = "TargetingPart", Callback = function(o) Targeting.TargetPart = o[1] end })
+TargetingTab:CreateSlider({ Name = "Predicción", Range = {0, 0.2}, CurrentValue = Aimbot.Prediction, Increment = 0.001, Flag = "TargetingPrediction", Callback = function(v) Aimbot.Prediction = v end })
 TargetingTab:CreateSection("Campo de Visión (FOV)")
-TargetingTab:CreateToggle({ Name = "Mostrar Círculo FOV", Flag = "ShowFOV", Callback = function(v) Aimbot.ShowFOV = v; FOV_Circle.Visible = v end })
-TargetingTab:CreateSlider({ Name = "Tamaño FOV", Min = 10, Max = 500, Precision = 0, Flag = "FOVSize", Callback = function(v) Aimbot.FOV = v; FOV_Circle.Radius = v end })
+TargetingTab:CreateToggle({ Name = "Mostrar Círculo FOV", CurrentValue = Aimbot.ShowFOV, Flag = "ShowFOV", Callback = function(v) Aimbot.ShowFOV = v; FOV_Circle.Visible = v end })
+TargetingTab:CreateSlider({ Name = "Tamaño FOV", Range = {10, 500}, CurrentValue = Aimbot.FOV, Increment = 1, Flag = "FOVSize", Callback = function(v) Aimbot.FOV = v; FOV_Circle.Radius = v end })
 
-local VisualsTab = Window:CreateTab("Visuales", "rbxassetid://4483346342")
-VisualsTab:CreateToggle({ Name = "Activar ESP", Flag = "ESPEnabled", Callback = function(v) ESP.Enabled = v end })
-VisualsTab:CreateToggle({ Name = "Caja", Flag = "ESPBox", Callback = function(v) ESP.BoxEnabled = v end })
-VisualsTab:CreateToggle({ Name = "Trazadores", Flag = "ESPTracer", Callback = function(v) ESP.TracerEnabled = v end })
-VisualsTab:CreateColorpicker({ Name = "Color 'TARGET'", Flag = "TargetLabelColor", Callback = function(c) ESP.TargetLabelColor = c; TargetLabel.Color = c end })
+-- Contenido de Pestaña Visuales
+VisualsTab:CreateSection("Configuración de ESP")
+VisualsTab:CreateToggle({ Name = "Activar ESP", CurrentValue = ESP.Enabled, Flag = "ESPEnabled", Callback = function(v) ESP.Enabled = v end })
+VisualsTab:CreateToggle({ Name = "Caja", CurrentValue = ESP.BoxEnabled, Flag = "ESPBox", Callback = function(v) ESP.BoxEnabled = v end })
+VisualsTab:CreateToggle({ Name = "Trazadores", CurrentValue = ESP.TracerEnabled, Flag = "ESPTracer", Callback = function(v) ESP.TracerEnabled = v end })
+VisualsTab:CreateSection("Colores")
+VisualsTab:CreateColorPicker({ Name = "Color 'TARGET'", Color = ESP.TargetLabelColor, Flag = "TargetLabelColor", Callback = function(c) ESP.TargetLabelColor = c; TargetLabel.Color = c end })
+VisualsTab:CreateColorPicker({ Name = "Color de Caja", Color = ESP.BoxColor, Flag = "BoxColorESP", Callback = function(c) ESP.BoxColor = c end })
+VisualsTab:CreateColorPicker({ Name = "Color de Trazador", Color = ESP.TracerColor, Flag = "TracerColorESP", Callback = function(c) ESP.TracerColor = c end })
 
--- Re-poblar la pestaña de Ajustes
-SettingsTab:CreateToggle({ Name = "Ignorar Compañeros de Equipo", Flag = "IgnoreTeammates", Callback = function(v) Settings.IgnoreTeammates = v end })
-SettingsTab:CreateToggle({ Name = "Solo Objetivos Visibles (Raycast)", Flag = "VisibleOnly", Callback = function(v) Settings.TargetVisibleOnly = v end })
-SettingsTab:CreateButton({ Name = "Recargar Configuración", Callback = function() Rayfield:LoadConfiguration(); Log("Configuración recargada.") end })
-SettingsTab:CreateButton({ Name = "Limpiar Log de Consola", Callback = function() logText = "Consola limpiada."; LogParagraph:Set({Content = logText}) end})
-
-Log("UI construida correctamente.")
+-- Contenido de Pestaña Ajustes
+SettingsTab:CreateSection("Filtros Globales")
+SettingsTab:CreateToggle({ Name = "Ignorar Compañeros de Equipo", CurrentValue = Settings.IgnoreTeammates, Flag = "IgnoreTeammates", Callback = function(v) Settings.IgnoreTeammates = v end })
+SettingsTab:CreateToggle({ Name = "Solo Objetivos Visibles (Raycast)", CurrentValue = Settings.TargetVisibleOnly, Flag = "VisibleOnly", Callback = function(v) Settings.TargetVisibleOnly = v end })
+SettingsTab:CreateSection("Utilidades")
+SettingsTab:CreateButton({ Name = "Recargar Configuración", Callback = function() Rayfield:LoadConfiguration(); Rayfield:Notify({Title="AVORN", Content="Configuración recargada."}) end })
 
 --//=============================================================================================================\\
 --||                                           [ 4. LÓGICA Y FUNCIONES ]                                         ||
@@ -136,6 +120,7 @@ end
 
 function getClosestPlayer()
     local closestPlayer, minDistance = nil, Aimbot.FOV
+    if not Camera then return nil end
     local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(Targeting.TargetPart) and player.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
@@ -157,8 +142,6 @@ end
 --||                                        [ 5. HOOKS Y EVENTOS ]                                               ||
 --\\=============================================================================================================//
 
-Log("Conectando eventos y hooks...")
-
 RunService.RenderStepped:Connect(function(dt)
     if not Camera or not Camera.Parent then Camera = Workspace.CurrentCamera; return end
     Targeting.CurrentTarget = getClosestPlayer()
@@ -175,24 +158,28 @@ RunService.RenderStepped:Connect(function(dt)
     if Aimbot.ShowFOV then FOV_Circle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2) end
 end)
 
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local method = getnamecallmethod()
-    local args = {...}
-    if self == Workspace and method == "FindPartOnRayWithWhitelist" and SilentAim.Enabled and Targeting.CurrentTarget then
-        if math.random(1, 100) <= SilentAim.HitChance then
-            local ray = args[1]
-            local targetPart = Targeting.CurrentTarget.Character[Targeting.TargetPart]
-            local predictedPos = targetPart.Position + (targetPart.AssemblyLinearVelocity * Aimbot.Prediction)
-            args[1] = Ray.new(ray.Origin, (predictedPos - ray.Origin).Unit * 1000)
-            return oldNamecall(self, unpack(args))
+if hookmetamethod then
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
+        if self == Workspace and method == "FindPartOnRayWithWhitelist" and SilentAim.Enabled and Targeting.CurrentTarget then
+            if math.random(1, 100) <= SilentAim.HitChance then
+                local ray = args[1]
+                local targetPart = Targeting.CurrentTarget.Character[Targeting.TargetPart]
+                local predictedPos = targetPart.Position + (targetPart.AssemblyLinearVelocity * Aimbot.Prediction)
+                args[1] = Ray.new(ray.Origin, (predictedPos - ray.Origin).Unit * 1000)
+                return oldNamecall(self, unpack(args))
+            end
         end
-    end
-    return oldNamecall(self, unpack(args))
-end)
+        return oldNamecall(self, unpack(args))
+    end)
+else
+    Rayfield:Notify({Title="AVORN Error", Content="Tu exploit no soporta hookmetamethod. Silent Aim desactivado.", Duration = 10})
+end
 
 --//=============================================================================================================\\
 --||                                           [ 6. FINALIZACIÓN ]                                               ||
 --\\=============================================================================================================//
 
 Rayfield:LoadConfiguration()
-Log("Configuración de usuario cargada. AVORN 2.0 está listo.")
+Rayfield:Notify({Title="AVORN 3.0", Content="Script cargado y listo. Creado por yordy alias the strongest.", Duration = 7})
