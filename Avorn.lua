@@ -210,4 +210,4 @@ Console:Log("Lógica del juego y eventos conectados.")
 --\\=============================================================================================================//
 
 Rayfield:LoadConfiguration()
-Console:Log("Configuración de usuario cargada. AVORN está listo.")```
+Console:Log("Configuración de usuario cargada. AVORN está listo.")
