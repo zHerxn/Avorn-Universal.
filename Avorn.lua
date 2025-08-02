@@ -1,9 +1,9 @@
 --[[
-    AVORN BETA v0.6
+    AVORN BETA v0.7
     Desarrollador: yordy alias the strongest
-    Changelog v0.5 -> v0.6:
-    - [CORRECCIÓN CRÍTICA] Reestructurado el script para solucionar el bug que impedía la carga de las pestañas y funciones.
-    - El nuevo orden (Variables -> UI -> Lógica) garantiza una inicialización estable y predecible.
+    Changelog v0.6 -> v0.7:
+    - [CORRECCIÓN CRÍTICA] Se eliminó la función 'CreateSplash' que causaba el error "attempt to call missing method".
+      El script ahora es totalmente compatible con la librería cargada, omitiendo la pantalla de bienvenida para garantizar la funcionalidad.
 ]]
 
 --//=============================================================================================================\\
@@ -50,19 +50,16 @@ TargetLabel.Visible, TargetLabel.Text, TargetLabel.Center, TargetLabel.Outline, 
 
 -- Crear la Ventana Principal
 local Window = Rayfield:CreateWindow({
-    Name = "AVORN BETA v0.6", LoadingTitle = "AVORN BETA", LoadingSubtitle = "por yordy alias the strongest",
-    ConfigurationSaving = { Enabled = true, FolderName = "AVORN_BETA", FileName = "Config_v6" },
-})
-
--- Crear la Pantalla de Bienvenida
-Window:CreateSplash({
-    Name = "AVORN BETA", SubName = "v0.6 - Estableciendo...", Color = Color3.fromRGB(255, 49, 49),
-    SubColor = Color3.fromRGB(255, 184, 0), BG = Color3.fromRGB(13, 13, 13), Font = Enum.Font.SourceSans,
+    Name = "AVORN BETA v0.7",
+    LoadingTitle = "AVORN BETA",
+    LoadingSubtitle = "por yordy alias the strongest",
+    ConfigurationSaving = { Enabled = true, FolderName = "AVORN_BETA", FileName = "Config_v7" },
 })
 
 -- Crear la Consola
 local Console = Window:CreateConsole({ Name = "Consola", MaxLogs = 100 })
-Console:Log("Sistema AVORN v0.6 inicializado.")
+Console:Log("Sistema AVORN v0.7 inicializado.")
+Console:Log("Nota: Pantalla de bienvenida omitida para compatibilidad.")
 Console:Log("Construyendo interfaz de usuario...")
 
 -- Pestaña de Combate
@@ -93,7 +90,7 @@ SettingsTab:CreateToggle({ Name = "Ignorar Compañeros de Equipo", CurrentValue 
 SettingsTab:CreateSection("Utilidades de la UI")
 SettingsTab:CreateButton({ Name = "Limpiar todos los elementos visuales", Callback = function() for p,_ in pairs(ESP_Elements) do CleanUpPlayerESP(p) end; Console:Log("Elementos ESP limpiados.") end })
 SettingsTab:CreateButton({ Name = "Recargar Configuración", Callback = function() Rayfield:LoadConfiguration(); Console:Log("Configuración recargada.") end })
-SettingsTab:CreateButton({ Name = "Mostrar Estado Actual en Consola", Callback = function() Console:Log("--- ESTADO ACTUAL DE AVORN v0.6 ---"); Console:Log("Ignorar Equipo: " .. tostring(Settings.IgnoreTeammates)); Console:Log("Aimbot Activado: " .. tostring(Aimbot.Enabled)); Console:Log("Suavizado: " .. tostring(Aimbot.Smoothing)); Console:Log("FOV: " .. tostring(Aimbot.FOV)); Console:Log("ESP Activado: " .. tostring(ESP.Enabled)); Console:Log("-----------------------------") end })
+SettingsTab:CreateButton({ Name = "Mostrar Estado Actual en Consola", Callback = function() Console:Log("--- ESTADO ACTUAL DE AVORN v0.7 ---"); Console:Log("Ignorar Equipo: " .. tostring(Settings.IgnoreTeammates)); Console:Log("Aimbot Activado: " .. tostring(Aimbot.Enabled)); Console:Log("Suavizado: " .. tostring(Aimbot.Smoothing)); Console:Log("FOV: " .. tostring(Aimbot.FOV)); Console:Log("ESP Activado: " .. tostring(ESP.Enabled)); Console:Log("-----------------------------") end })
 
 Console:Log("Interfaz de usuario construida correctamente.")
 
